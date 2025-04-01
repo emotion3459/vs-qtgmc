@@ -15,8 +15,8 @@ class SearchPostProcess(CustomIntEnum):
 
 class LosslessMode(CustomIntEnum):
     NONE = 0
-    POSTSMOOTH = 1
-    PRESHARPEN = 2
+    PRESHARPEN = 1
+    POSTSMOOTH = 2
 
 
 class NoiseDeintMode(CustomIntEnum):
@@ -26,7 +26,7 @@ class NoiseDeintMode(CustomIntEnum):
 
 
 class NoiseProcessMode(CustomIntEnum):
-    BYPASS = 0
+    NONE = 0
     DENOISE = 1
     IDENTIFY = 2
 
