@@ -1,4 +1,5 @@
 .mypy_cache/
 .vsjet/
 __pycache__/
-etc/
+havsfunc_qtgmc.py
+test.vpy
