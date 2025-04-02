@@ -25,7 +25,6 @@ from vsrgtools import (
     BlurMatrix,
     RepairMode,
     RemoveGrainMode,
-    sbr,
     repair,
     unsharpen,
     gauss_blur,
@@ -323,17 +322,15 @@ class QTempGaussMC:
         if self.input_type == InputType.INTERLACE:
             denoised = reinterlace(denoised, self.tff)
 
-        if self.basic_noise_restore or self.final_noise_restore:
-            noise = src.std.MakeDiff(denoised)
+        noise = src.std.MakeDiff(denoised)
 
-            if self.input_type != InputType.INTERLACE:
-                noise_deint = noise
-            else:
+        if self.basic_noise_restore or self.final_noise_restore:
+            if self.input_type == InputType.INTERLACE:
                 match self.denoise_deint:
                     case NoiseDeintMode.WEAVE:
-                        noise_deint = core.std.Interleave([noise] * 2)
+                        noise = core.std.Interleave([noise] * 2)
                     case NoiseDeintMode.BOB:
-                        noise_deint = noise.resize.Bob(tff=self.tff)
+                        noise = noise.resize.Bob(tff=self.tff)
                     case NoiseDeintMode.GENERATE:
                         noise_source = noise.std.SeparateFields(self.tff)
 
@@ -345,24 +342,24 @@ class QTempGaussMC:
                         )
                         noise_limit = norm_expr([noise_max, noise_min, noise_new], 'x y - z * range_size / y +')
 
-                        noise_deint = core.std.Interleave([noise_source, noise_limit]).std.DoubleWeave(self.tff)
+                        noise = core.std.Interleave([noise_source, noise_limit]).std.DoubleWeave(self.tff)
 
             if self.denoise_stabilize:
                 weight1, weight2 = self.denoise_stabilize
 
                 noise_comp, _ = self.mv.compensate(
-                    noise_deint, direction=MVDirection.BACKWARD,
+                    noise, direction=MVDirection.BACKWARD,
                     tr=1, interleave=False,
                     **self.denoise_stabilize_comp_args,
                 )
 
-                noise_deint = norm_expr(
-                    [noise_deint, *noise_comp],
+                noise = norm_expr(
+                    [noise, *noise_comp],
                     'x neutral - abs y neutral - abs > x y ? {weight1} * x y + {weight2} * +',
                     weight1=weight1, weight2=weight2,
                 )
 
-            self.noise = noise_deint
+        self.noise = noise
 
         return denoised if self.denoise_mode == NoiseProcessMode.DENOISE else src
 
