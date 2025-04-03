@@ -205,19 +205,35 @@ class QTempGaussMC:
         if not erosion_distance:
             return flt
 
+        iter1 = 1 + (erosion_distance + 1) // 3
+        iter2 = 1 + (erosion_distance + 2) // 3
+
         diff = src.std.MakeDiff(flt)
 
-        opening = Morpho.minimum(diff, iterations=erosion_distance, coords=Coordinates.VERTICAL)
-        opening = Morpho.deflate(opening)
-        opening = Morpho.maximum(opening, iterations=erosion_distance, coords=Coordinates.VERTICAL)
+        opening = Morpho.minimum(diff, iterations=iter1, coords=Coordinates.VERTICAL)
 
-        closing = Morpho.maximum(diff, iterations=erosion_distance, coords=Coordinates.VERTICAL)
-        closing = Morpho.inflate(closing)
-        closing = Morpho.minimum(closing, iterations=erosion_distance, coords=Coordinates.VERTICAL)
+        if erosion_distance % 3:
+            opening = Morpho.deflate(opening)
+            if erosion_distance % 3 == 2:
+                opening = median_blur(opening)
+
+        opening = Morpho.maximum(opening, iterations=iter2, coords=Coordinates.VERTICAL)
+
+        closing = Morpho.maximum(diff, iterations=iter1, coords=Coordinates.VERTICAL)
+
+        if erosion_distance % 3:
+            closing = Morpho.inflate(closing)
+            if erosion_distance % 3 == 2:
+                closing = median_blur(closing)
+
+        closing = Morpho.minimum(closing, iterations=iter2, coords=Coordinates.VERTICAL)
 
         if over_dilation:
-            opening = Morpho.inflate(opening, over_dilation)
-            closing = Morpho.deflate(closing, over_dilation)
+            opening = Morpho.maximum(iterations=over_dilation // 3)
+            opening = Morpho.inflate(iterations=over_dilation % 3)
+
+            closing = Morpho.minimum(iterations=over_dilation // 3)
+            closing = Morpho.deflate(iterations=over_dilation % 3)
 
         return norm_expr(
             [flt, diff, opening, closing],
